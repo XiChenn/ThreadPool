@@ -3,10 +3,12 @@ package com.example.threadpool;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class FixedThreadPool {
+
+    private int poolSize;
 
     /**
      * The queue used for holding tasks and handing off to worker threads
@@ -43,24 +45,24 @@ public class FixedThreadPool {
         }
     }
 
-    public FixedThreadPool(int poolSize, int taskSize) {
-        if (poolSize <= 0 || taskSize <= 0) {
-            throw new IllegalArgumentException("Invalid parameters");
+    public FixedThreadPool(int poolSize, BlockingQueue workQueue) {
+        if (poolSize <= 0 ) {
+            throw new IllegalArgumentException();
         }
-        workQueue = new LinkedBlockingQueue<>(taskSize);
-
-        for (int i = 0; i < poolSize; i++) {
-            Worker worker = new Worker();
-            worker.start();
-            workers.add(worker);
-        }
+        this.poolSize = poolSize;
+        this.workQueue = workQueue;
     }
 
-    public boolean submit(Runnable task) {
+    public void execute (Runnable task) {
         if (isRunning) {
-            return workQueue.offer(task);
+            workQueue.offer(task);
+
+            if (workers.size() < poolSize) {
+                Worker worker = new Worker();
+                worker.start();
+                workers.add(worker);
+            }
         }
-        return false;
     }
 
     /**
@@ -81,10 +83,12 @@ public class FixedThreadPool {
 
     public static void main(String[] args) {
         int poolSize = 3;
-        int taskSize = 6;
-        FixedThreadPool pool = new FixedThreadPool(poolSize, taskSize);
+        int taskSize = 12;
+        BlockingQueue workQueue = new ArrayBlockingQueue<>(taskSize);
+        FixedThreadPool pool = new FixedThreadPool(poolSize, workQueue);
+
         for (int i = 0; i < taskSize; i++) {
-            pool.submit(new Runnable() {
+            pool.execute(new Runnable() {
                 @Override
                 public void run() {
                     System.out.println("Add a new thread...");
